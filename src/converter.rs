@@ -1,13 +1,14 @@
 ﻿use anyhow::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sp1_sdk::{ProverClient, SP1ProofWithPublicValues};
 use sp1_zkv_sdk::*;
 use std::path::Path;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ConvertedProof {
     pub proof: String,
     pub pub_inputs: String,
+    pub vk: String,
 }
 
 // Helper function to get hex strings with 0x prefix
@@ -23,7 +24,7 @@ impl ProofConverter {
         Self
     }
 
-    pub async fn convert_proof(&self, artifact_path: &Path, _vk: &str) -> Result<ConvertedProof> {
+    pub async fn convert_proof(&self, artifact_path: &Path, vk: &str) -> Result<ConvertedProof> {
         let proof = SP1ProofWithPublicValues::load(artifact_path)?;
         let client = ProverClient::from_env();
 
@@ -44,6 +45,7 @@ impl ProofConverter {
         let output = ConvertedProof {
             proof: to_hex_with_prefix(&serialized_proof),
             pub_inputs: to_hex_with_prefix(&public_values),
+            vk: vk.to_string(), // Keep VK as hex string, don't double-encode
         };
         Ok(output)
     }

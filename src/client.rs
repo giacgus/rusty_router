@@ -1,7 +1,7 @@
 ﻿use anyhow::Result;
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug};
+
 
 #[derive(Debug, Deserialize)]
 pub struct ProofRequestMetadata {

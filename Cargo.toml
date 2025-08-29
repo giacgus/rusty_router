@@ -19,3 +19,7 @@ tempfile = "3.8"
 
 sp1-sdk = "5.2.1"
 sp1-zkv-sdk = { git = "https://github.com/zkVerify/sp1-verifier" }
+subxt = { version = "0.44", features = ["native"] }
+subxt-signer = "0.44"
+bip39 = "2.0"
+dotenv = "0.15"
