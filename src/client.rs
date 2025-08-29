@@ -85,9 +85,6 @@ impl ProofClient {
         };
 
         // Extract VK from "Program Blobstream" section
-        println!("🔍 Searching for VK around 'Program Blobstream' keywords...");
-        
-        // First, let's see if we can find "Program Blobstream" or similar
         let possible_keywords = ["Program Blobstream", "Blobstream", "Program"];
         let mut found_keyword = None;
         let mut found_position = 0;
@@ -96,7 +93,6 @@ impl ProofClient {
             if let Some(pos) = html_content.find(keyword) {
                 found_keyword = Some(keyword);
                 found_position = pos;
-                println!("✅ Found keyword '{}' at position: {}", keyword, pos);
                 break;
             }
         }
@@ -107,25 +103,21 @@ impl ProofClient {
             let search_end = (found_position + 2000).min(html_content.len());
             let search_section = &html_content[search_start..search_end];
             
-            println!("🔍 Searching in section around '{}'...", keyword);
-            println!("🔍 Section preview: {}", &search_section[..search_section.len().min(200)]);
-            
             // Look for VK pattern (32 bytes = 64 hex chars)
             let vk_pattern = r#"0x[0-9a-fA-F]{64}"#;
             if let Ok(re) = regex::Regex::new(vk_pattern) {
                 if let Some(captures) = re.captures(search_section) {
                     let found_vk = captures[0].to_string();
-                    println!("✅ Found VK in HTML: {}", found_vk);
+                    println!("✅ VK found: {}", found_vk);
                     Some(found_vk)
                 } else {
-                    println!("❌ No VK pattern found in section");
                     // Let's also search the entire HTML for any VK pattern
                     if let Some(captures) = re.captures(&html_content) {
                         let found_vk = captures[0].to_string();
-                        println!("✅ Found VK in entire HTML: {}", found_vk);
+                        println!("✅ VK found: {}", found_vk);
                         Some(found_vk)
                     } else {
-                        println!("❌ No VK pattern found anywhere in HTML");
+                        println!("❌ No VK pattern found");
                         None
                     }
                 }

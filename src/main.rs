@@ -71,30 +71,30 @@ async fn main() -> anyhow::Result<()> {
 
     // Handle proof conversion (original functionality) - only if request_id is provided
     if let Some(request_id) = args.request_id {
-        info!("Fetching proof request metadata...");
+        println!("🌐 Loading explorer page for request: {}", request_id);
         let client = ProofClient::new_with_options(&args.api_base, args.verbose);
         let metadata = client.fetch_request_metadata(&request_id).await?;
 
-        info!("Downloading proof artifact...");
+        println!("📦 Downloading proof artifact...");
         let artifact_data = client.download_artifact(&metadata.artifact_url).await?;
 
         // Create a temporary file to store the artifact
         let temp_file = NamedTempFile::new()?;
         let temp_file_path = temp_file.path().to_path_buf();
 
-        info!("Saving artifact to temporary file...");
+        println!("💾 Saving artifact to temporary file...");
         tokio::fs::write(&temp_file_path, artifact_data).await?;
 
-        info!("Converting proof to zkVerify format...");
+        println!("🔄 Converting proof to zkVerify format...");
         let converter = ProofConverter::new();
         let converted_proof = converter
             .convert_proof(&temp_file_path, &metadata.vk)
             .await?;
 
-        info!("Saving converted proof...");
+        println!("💾 Saving converted proof...");
         converter.save_proof(&converted_proof, &args.output).await?;
 
-        info!("Proof converted successfully: {}", args.output.display());
+        println!("✅ Conversion successful: {}", args.output.display());
 
         // If --get-proof is specified, also save detailed proof information
         if args.get_proof {
@@ -125,9 +125,11 @@ async fn main() -> anyhow::Result<()> {
         }
 
         if args.submit_to_zkverify {
-            info!("Submitting proof to zkVerify network...");
+            println!("🚀 Submitting proof to zkVerify network...");
             let tx_hash = substrate_client.submit_proof_to_zkverify(&args.output).await?;
-            info!("Proof submitted successfully to zkVerify! Transaction hash: {}", tx_hash);
+            println!("🎉 Proof submitted successfully to zkVerify!");
+            println!("🔗 Extrinsic ID: {}", tx_hash);
+            println!("🌐 View on zkVerify Testnet Explorer: https://zkverify-testnet.subscan.io/extrinsic/{}", tx_hash);
         }
 
         if args.list_pallets {

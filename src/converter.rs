@@ -28,33 +28,20 @@ impl ProofConverter {
         let proof = SP1ProofWithPublicValues::load(artifact_path)?;
         let client = ProverClient::from_env();
 
-        // Debug the proof structure before moving it
-        println!("Debug: SP1ProofWithPublicValues loaded successfully");
-        println!("Debug: Proof structure: {:?}", proof);
-
-        // Use VK from the HTML page (around "Program Blobstream")
-        println!("Debug: Using VK from HTML page: {}", vk_from_page);
-        
         let vk = if !vk_from_page.is_empty() {
             vk_from_page.to_string()
         } else {
-            println!("Debug: No VK from HTML, extracting from proof structure...");
             // Fallback to extracting from proof structure
             match &proof.proof {
                 sp1_sdk::SP1Proof::Compressed(sp1_reduce_proof) => {
-                    println!("Debug: Found SP1ReduceProof, extracting VK...");
                     let vk_bytes = sp1_reduce_proof.vk.hash_bytes();
-                    println!("Debug: VK bytes length: {}", vk_bytes.len());
                     to_hex_with_prefix(&vk_bytes)
                 }
                 _ => {
-                    println!("Debug: Unexpected proof format, using placeholder");
                     "0x0000000000000000000000000000000000000000000000000000000000000000".to_string()
                 }
             }
         };
-        
-        println!("Debug: Final VK to use: {}", vk);
 
         // Convert proof and vk into a zkVerify-compatible proof.
         let SP1ZkvProofWithPublicValues {
