@@ -6,13 +6,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize)]
 pub struct ProofRequestMetadata {
     pub artifact_url: String,
-    pub program: String, // This contains the VK
-}
-
-impl ProofRequestMetadata {
-    pub fn vk(&self) -> &str {
-        &self.program
-    }
+    pub vk: String,
 }
 
 pub struct ProofClient {
@@ -61,6 +55,7 @@ impl ProofClient {
         
         let html_content = String::from_utf8_lossy(&output.stdout);
         println!("Rendered HTML length: {}", html_content.len());
+        println!("DEBUG: Starting VK extraction...");
         
         // Print a small snippet if verbose mode is enabled
         if self.verbose {
@@ -68,9 +63,10 @@ impl ProofClient {
             println!("HTML preview (first 500 chars): {}", preview);
         }
         
+
+        
         // Extract artifact URL using regex
         let artifact_pattern = r#"(https://spn-artifacts-mainnet\.s3[^"<>\s]*)"#;
-        let vk_pattern = r#"(0x[0-9a-fA-F]{64,})"#;
         
         let artifact_url = if let Ok(re) = regex::Regex::new(artifact_pattern) {
             re.captures(&html_content)
@@ -87,24 +83,74 @@ impl ProofClient {
         } else {
             None
         };
+
+        // Extract VK from "Program Blobstream" section
+        println!("🔍 Searching for VK around 'Program Blobstream' keywords...");
         
-        let program_vk = if let Ok(re) = regex::Regex::new(vk_pattern) {
-            re.captures(&html_content)
-                .and_then(|caps| caps.get(1))
-                .map(|m| m.as_str().to_string())
+        // First, let's see if we can find "Program Blobstream" or similar
+        let possible_keywords = ["Program Blobstream", "Blobstream", "Program"];
+        let mut found_keyword = None;
+        let mut found_position = 0;
+        
+        for keyword in &possible_keywords {
+            if let Some(pos) = html_content.find(keyword) {
+                found_keyword = Some(keyword);
+                found_position = pos;
+                println!("✅ Found keyword '{}' at position: {}", keyword, pos);
+                break;
+            }
+        }
+        
+        let vk = if let Some(keyword) = found_keyword {
+            // Look for VK pattern around this section (look back and forward)
+            let search_start = found_position.saturating_sub(1000);
+            let search_end = (found_position + 2000).min(html_content.len());
+            let search_section = &html_content[search_start..search_end];
+            
+            println!("🔍 Searching in section around '{}'...", keyword);
+            println!("🔍 Section preview: {}", &search_section[..search_section.len().min(200)]);
+            
+            // Look for VK pattern (32 bytes = 64 hex chars)
+            let vk_pattern = r#"0x[0-9a-fA-F]{64}"#;
+            if let Ok(re) = regex::Regex::new(vk_pattern) {
+                if let Some(captures) = re.captures(search_section) {
+                    let found_vk = captures[0].to_string();
+                    println!("✅ Found VK in HTML: {}", found_vk);
+                    Some(found_vk)
+                } else {
+                    println!("❌ No VK pattern found in section");
+                    // Let's also search the entire HTML for any VK pattern
+                    if let Some(captures) = re.captures(&html_content) {
+                        let found_vk = captures[0].to_string();
+                        println!("✅ Found VK in entire HTML: {}", found_vk);
+                        Some(found_vk)
+                    } else {
+                        println!("❌ No VK pattern found anywhere in HTML");
+                        None
+                    }
+                }
+            } else {
+                println!("❌ Failed to compile VK regex");
+                None
+            }
         } else {
+            println!("❌ No keywords found in HTML");
             None
         };
         
-        match (&artifact_url, &program_vk) {
-            (Some(url), Some(vk)) => {
+
+        
+        match artifact_url {
+            Some(url) => {
                 println!("✅ Found artifact URL: {}", url);
-                println!("✅ Found verification key: {}", vk);
-                Ok(ProofRequestMetadata { artifact_url: url.clone(), program: vk.clone() })
+                Ok(ProofRequestMetadata { 
+                    artifact_url: url.clone(),
+                    vk: vk.unwrap_or_default(),
+                })
             }
-            _ => {
-                println!("❌ Missing data - artifact_url: {:?}, program: {:?}", artifact_url, program_vk);
-                anyhow::bail!("Failed to extract metadata from rendered page")
+            None => {
+                println!("❌ Missing artifact URL");
+                anyhow::bail!("Failed to extract artifact URL from rendered page")
             }
         }
     }

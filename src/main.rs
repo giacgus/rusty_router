@@ -42,6 +42,10 @@ struct Args {
     #[arg(long, default_value_t = false)]
     submit_to_zkverify: bool,
 
+    /// Extract and save detailed proof information without submitting
+    #[arg(long, default_value_t = false)]
+    get_proof: bool,
+
     /// List available pallets (for debugging)
     #[arg(long, default_value_t = false)]
     list_pallets: bool,
@@ -84,16 +88,23 @@ async fn main() -> anyhow::Result<()> {
         info!("Converting proof to zkVerify format...");
         let converter = ProofConverter::new();
         let converted_proof = converter
-            .convert_proof(&temp_file_path, &metadata.program)
+            .convert_proof(&temp_file_path, &metadata.vk)
             .await?;
-
-        // Explicitly clean up the temporary file
-        drop(temp_file);
 
         info!("Saving converted proof...");
         converter.save_proof(&converted_proof, &args.output).await?;
 
         info!("Proof converted successfully: {}", args.output.display());
+
+        // If --get-proof is specified, also save detailed proof information
+        if args.get_proof {
+            info!("Extracting detailed proof information...");
+            converter.save_detailed_proof_info(&temp_file_path, "proof_details.json").await?;
+            info!("Detailed proof information saved to proof_details.json");
+        }
+
+        // Explicitly clean up the temporary file
+        drop(temp_file);
     } else {
         info!("No request_id provided, skipping proof conversion");
     }
