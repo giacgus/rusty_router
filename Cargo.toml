@@ -1,7 +1,7 @@
 ﻿[package]
 name = "rusty_router"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
@@ -15,8 +15,7 @@ hex = "0.4"
 regex = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tempfile = "3.8"
 
-# SP1 dependencies removed for clean build
-# Add back when implementing real conversion:
-# sp1-sdk = { version = "5.2.1", optional = true }
-# sp1-zkv-sdk = { git = "https://github.com/zkVerify/sp1-verifier", optional = true }
+sp1-sdk = "5.2.1"
+sp1-zkv-sdk = { git = "https://github.com/zkVerify/sp1-verifier" }
